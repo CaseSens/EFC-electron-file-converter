@@ -9,8 +9,44 @@
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root">
-      <button id="loadFile">Load File</button>
-      <div id="mediaContainer"></div>
+      <div class="header">
+        <h1 style="color: #ad3a48">ELECTRON&nbsp;</h1>
+        <h1>File Converter</h1>
+      </div>
+      <div class="leftMenu">
+        <button id="loadFile">Load File</button>
+        <div id="loadedOptions" class="hidden">
+          <select id="dropFileType">
+            <!-- To be populated with options dynamically -->
+          </select>
+        </div>
+      </div>
+      <div
+        style="
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 88vh;
+          margin-left: 240px;
+        "
+      >
+        <p style="font-weight: bold;">Source preview</p>
+        <div id="mediaContainer" class="mediaContainerEmpty">
+          <div
+            style="
+              display: flex;
+              flex-direction: column;
+              gap: 4px;
+              align-items: center;
+            "
+          >
+            <p style="font-weight: lighter">
+              Or simply drag and drop a file into the container
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   </body>
 </html>

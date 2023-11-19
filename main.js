@@ -4,8 +4,8 @@ const path = require("path");
 
 function createWindow() {
   const win = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 1200,
+    height: 800,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -14,7 +14,11 @@ function createWindow() {
   });
 
   ipcMain.handle("loadFile", async () => {
-    return loadFile();
+    return openExplorerForResults();
+  });
+
+  ipcMain.handle("file-dragged", async (event, filePath) => {
+    return loadFile(filePath);
   });
 
   win.loadFile("./public/index.html");
@@ -34,7 +38,46 @@ app.on("activate", () => {
   }
 });
 
-async function loadFile() {
+async function loadFile(filePath) {
+  const window = BrowserWindow.getFocusedWindow();
+
+  fs.readFile(filePath, (err, data) => {
+    if (err) {
+      console.error("Failed to read file", err);
+      return;
+    }
+
+    const extension = filePath.split(".");
+    const fileExtension = extension[extension.length - 1];
+
+    let mimeType;
+    switch (fileExtension) {
+      case "png":
+      case "jpg":
+      case "jpeg":
+      case "gif":
+        mimeType = `image/${fileExtension}`;
+        break;
+      case "mp4":
+      case "mkv":
+      case "avi":
+      case "webm":
+      case "ogv":
+        mimeType = `video/${fileExtension}`;
+        break;
+      case "mp3":
+      case "wav":
+      case "aac":
+        mimeType = `audio/${fileExtension}`;
+      default:
+        mimeType = "application/octet-stream"; // Default or unknown file type
+    }
+
+    window.webContents.send('file-loaded', `data:${mimeType};base64,${data.toString('base64')}`);
+  });
+}
+
+async function openExplorerForResults() {
   const window = BrowserWindow.getFocusedWindow();
   const filters = [
     { name: "Images", extensions: ["jpg", "png", "gif", "bmp"] },
