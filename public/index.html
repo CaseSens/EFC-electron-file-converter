@@ -3,7 +3,18 @@
   <head>
     <meta charset="utf-8" />
     <title>Electron File Converter</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+      crossorigin="anonymous"
+    />
     <link rel="stylesheet" href="index.css" />
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+      crossorigin="anonymous"
+    ></script>
     <script src="index.js" defer></script>
   </head>
   <body>
@@ -13,40 +24,55 @@
         <h1 style="color: #ad3a48">ELECTRON&nbsp;</h1>
         <h1>File Converter</h1>
       </div>
-      <div class="leftMenu">
-        <button id="loadFile">Load File</button>
-        <div id="loadedOptions" class="hidden">
-          <select id="dropFileType">
-            <!-- To be populated with options dynamically -->
-          </select>
-        </div>
-      </div>
-      <div
-        style="
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 88vh;
-          margin-left: 240px;
-        "
-      >
-        <p style="font-weight: bold;">Source preview</p>
-        <div id="mediaContainer" class="mediaContainerEmpty">
-          <div
-            style="
-              display: flex;
-              flex-direction: column;
-              gap: 4px;
-              align-items: center;
-            "
-          >
-            <p style="font-weight: lighter">
-              Or simply drag and drop a file into the container
-            </p>
+      <div class="mainPage">
+        <div class="leftMenu">
+          <button id="loadFile" class="menuButton">Load File</button>
+          <div id="originalFileType" style="display: flex; gap: 8px">
+            <h1 class="boldedText">Original file type:</h1>
+            <p id="ogFileType"></p>
           </div>
+          <div id="loadedOptions" class="d-none">
+            <h1 class="boldedText">Convert to:</h1>
+            <select id="optionsSelect" class="form-select">
+              <!-- To be dynamically loaded -->
+            </select>
+          </div>
+          <div id="loadedFfmpegOptions">
+              <!-- To be dynamically loaded -->
+          </div>
+          <button id="convert" class="menuButton d-none">Convert</button>
         </div>
-      </div>
+        <div id="mediaContainerContainer" class="mediaContainerContainer">
+          <p style="font-weight: bold">Source preview</p>
+          <div id="mediaContainer" class="mediaContainerEmpty">
+            <div
+              style="
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                align-items: center;
+              "
+            >
+              <p style="font-weight: 500;">
+                Click the "Load File" button in the left menu to load a file
+              </p>
+              <p style="font-weight: lighter">
+                Or simply drag and drop a file into the container
+              </p>
+            </div>
+          </div>
+          <div class="video-controls-container">
+            <div class="playback-controls-container">
+              <input type="range" id="playbackSlider" min="0" max="100" value="0">
+              <div class="video-controls">
+                <button class="video-control-button"><<</button>
+                <button class="video-control-button">Play</button>
+                <button class="video-control-button">>></button>
+              </div>
+            </div>
+          </div>
+        </input>
+      </button>
     </div>
   </body>
 </html>

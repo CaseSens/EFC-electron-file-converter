@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "electron .",
-    "dev": "nodemon --watch main.js --watch preload.js --watch public/index.js --delay 2.5 --exec electron ."
+    "dev": "nodemon --watch main.js --watch preload.js --watch public/index.js --delay 1.5 --exec electron ."
   },
   "keywords": [],
   "author": "",
@@ -14,6 +14,7 @@
   "devDependencies": {
     "dotenv": "^16.3.1",
     "electron": "^27.0.4",
+    "js-ffmpeg": "^0.0.38",
     "nodemon": "^3.0.1"
   }
 }
