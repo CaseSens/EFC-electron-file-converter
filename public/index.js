@@ -1,46 +1,54 @@
 let mediaFilepath = "";
 const convertBtn = document.getElementById("convert");
+const dropdownFileTypes = document.getElementById("optionsSelect");
 
-document.addEventListener("DOMContentLoaded", () => {
-  const btnLoadFile = document.getElementById("loadFile");
-  const mediaContainer = document.getElementById("mediaContainer");
+let optionsMap = new Map();
 
-  const api = window.electronAPI;
+let scale = 1;
 
-  btnLoadFile.onclick = async () => {
-    await api.loadFile();
-  };
+const mediaContainerContainer = document.getElementById(
+  "mediaContainerContainer"
+);
 
-  mediaContainer.addEventListener("dragover", (event) => {
-    event.preventDefault();
-    mediaContainer.classList.add("dragover");
-  });
+const btnLoadFile = document.getElementById("loadFile");
+const mediaContainer = document.getElementById("mediaContainer");
 
-  mediaContainer.addEventListener("dragleave", () => {
-    mediaContainer.classList.remove("dragover");
-  });
 
-  mediaContainer.addEventListener("drop", async (event) => {
-    event.preventDefault();
-    mediaContainer.classList.replace(
-      "mediaContainerEmpty",
-      "mediaContainerLoaded"
-    );
-    mediaContainer.classList.remove("dragover");
+const api = window.electronAPI;
 
-    const file = event.dataTransfer.files[0];
-    if (file) {
-      const filepath = file.path;
-      await api.loadFile(filepath);
-    }
-  });
+btnLoadFile.onclick = async () => {
+  await api.loadFile();
+};
 
-  api.onFileLoaded((event, filepath) => {
-    console.log("File path received", filepath);
-    mediaFilepath = filepath;
-    const fileExtension = filepath.split(".").pop();
-    displayMedia(filepath, fileExtension);
-  });
+mediaContainer.addEventListener("dragover", (event) => {
+  event.preventDefault();
+  mediaContainer.classList.add("dragover");
+});
+
+mediaContainer.addEventListener("dragleave", () => {
+  mediaContainer.classList.remove("dragover");
+});
+
+mediaContainer.addEventListener("drop", async (event) => {
+  event.preventDefault();
+  mediaContainer.classList.replace(
+    "mediaContainerEmpty",
+    "mediaContainerLoaded"
+  );
+  mediaContainer.classList.remove("dragover");
+
+  const file = event.dataTransfer.files[0];
+  if (file) {
+    const filepath = file.path;
+    await api.loadFile(filepath);
+  }
+});
+
+api.onFileLoaded((event, filepath) => {
+  console.log("File path received", filepath);
+  mediaFilepath = filepath;
+  const fileExtension = filepath.split(".").pop();
+  displayMedia(filepath, fileExtension);
 });
 
 function displayMedia(filepath, extension) {
@@ -54,6 +62,7 @@ function displayMedia(filepath, extension) {
         element = new Image();
         element.id = "imageView";
         element.src = src;
+        element.style.position = "absolute";
       }
       break;
     case "video":
@@ -61,7 +70,6 @@ function displayMedia(filepath, extension) {
         element = document.createElement("video");
         element.id = "videoView";
         element.src = src;
-        element.controls = true;
         element.volume = 0.7;
       }
       break;
@@ -84,48 +92,45 @@ function displayMedia(filepath, extension) {
 
   element.onerror = (err) => {
     console.error(err);
+    return;
   };
+
+  mediaContainer.innerHTML = "";
+
 
   if (element instanceof HTMLImageElement) {
     element.onload = () => {
-      mediaContainer.innerHTML = "";
-      mediaContainer.appendChild(element);
+      const canvas = document.createElement('canvas');
+      canvas.width = element.naturalWidth;
+      canvas.height = element.naturalHeight;
+      canvas.id = 'canvas';
+
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(element, 0, 0);
+      mediaContainer.appendChild(canvas);
+      mediaContainer.style.width = `${element.naturalWidth}px`;
+      mediaContainer.style.height = `${element.naturalHeight}px`;
       loadElementsAfterFileLoad(type, extension);
       convertBtn.classList.remove("d-none");
     };
   } else if (element instanceof HTMLVideoElement) {
+    const testDiv = document.getElementById('testDiv');
     element.oncanplay = () => {
-      mediaContainer.innerHTML = "";
+      if (controlsCreated) {
+        deleteVideoControls(testDiv);
+      }
       mediaContainer.appendChild(element);
+      mediaContainer.style.width = `${element.videoWidth}px`;
+      mediaContainer.style.height = `${element.videoHeight}px`;
       loadElementsAfterFileLoad(type, extension);
       convertBtn.classList.remove("d-none");
-      const mediaContainerContainer = document.getElementById(
-        "mediaContainerContainer"
-      );
+      createVideoControls(testDiv, element);
     };
   } else if (element instanceof HTMLAudioElement) {
   }
-}
 
-function determineMediaType(extension) {
-  switch (extension) {
-    case "png":
-    case "jpg":
-    case "jpeg":
-    case "gif":
-      return "image";
-    case "mp4":
-    case "mkv":
-    case "avi":
-    case "webm":
-    case "ogv":
-      return "video";
-    case "mp3":
-    case "wav":
-    case "aac":
-      return "audio";
-    default:
-      return "unknown";
+  convertBtn.onclick = () => {
+    convertMedia(filepath, extension);
   }
 }
 
@@ -152,7 +157,6 @@ function loadSelectMenu(filetype, extension) {
   originalFileExtension.innerHTML = extension;
   const loadedOptions = document.getElementById("loadedOptions");
   loadedOptions.classList.remove("d-none");
-  const dropdownFileTypes = document.getElementById("optionsSelect");
 
   const imgPossibilities = ["png", "jpg", "jpeg", "gif"];
   const vidPossibilities = ["mp4", "mkv", "avi", "webm", "ogv"];
@@ -192,9 +196,194 @@ function loadSelectMenu(filetype, extension) {
   });
 }
 
+/* ------------------------------------------------- */
+
+let aspectRatioMaintained = true;
+let cropping = false;
+
+function renderDefaultVisualFfmpegOptions(width, height, media, container) {
+  optionsMap.clear();
+  const mediaContainer = media.parentNode;
+  const aspectRatio = width / height;
+
+  const widthInput = createLabeledInput({
+    type: "number",
+    id: "mediaWidthInput",
+    value: width,
+    label: "Width",
+    callback: {
+      eventType: "input",
+      callbackFunc: (event) => {
+        resizeMediaAndContainer({
+          width: event.target.value,
+          media: media,
+          mediaContainer: mediaContainer,
+          maintainAspectRatio: aspectRatioMaintained,
+          aspectRatio: aspectRatio,
+        })
+      }
+    }
+  });
+  optionsMap.set('widthInput', widthInput);
+
+  const heightInput = createLabeledInput({
+    type: "number",
+    id: "mediaHeightInput",
+    value: height,
+    label: "Height",
+    callback: {
+      eventType: "input",
+      callbackFunc: (event) => {
+        resizeMediaAndContainer({
+          height: event.target.value,
+          media: media,
+          mediaContainer: mediaContainer,
+          maintainAspectRatio: aspectRatioMaintained,
+          aspectRatio: aspectRatio,
+        })
+      }
+    }
+  });
+  optionsMap.set('heightInput', heightInput);
+
+  const flipXInput = createLabeledInput({
+    type: "checkbox",
+    id: "flipX",
+    value: false,
+    label: "Flip X axis?",
+    callback: {
+      eventType: "change",
+      callbackFunc: (event) => {
+        const flipX = event.target.checked ? -1 : 1;
+        const flipY = document.getElementById('flipY').checked ? -1 : 1;
+        media.style.transform = `scaleX(${flipX}) scaleY(${flipY})`;
+      },
+    },
+  });
+  optionsMap.set('flipXInput', flipXInput);
+
+  const flipYInput = createLabeledInput({
+    type: "checkbox",
+    id: "flipY",
+    value: false,
+    label: "Flip Y axis?",
+    callback: {
+      eventType: "change",
+      callbackFunc: (event) => {
+        const flipY = event.target.checked ? -1 : 1;
+        const flipX = document.getElementById('flipX').checked ? -1 : 1;
+        media.style.transform = `scaleX(${flipX}) scaleY(${flipY})`;
+      }
+    }
+  });
+  optionsMap.set('flipYInput', flipYInput);
+
+  const aspectRatioInput = createLabeledInput({
+    type: "checkbox",
+    id: "aspectRatioMaintained",
+    value: true,
+    label: "Maintain Aspect Ratio?",
+    callback: {
+      eventType: "change",
+      callbackFunc: () => {
+        aspectRatioMaintained = !aspectRatioMaintained;
+        if (aspectRatioMaintained) {
+          resizeMediaAndContainer({
+            width: document.getElementById('mediaWidthInput').value,
+            media: media,
+            mediaContainer: mediaContainer,
+            maintainAspectRatio: aspectRatioMaintained,
+            aspectRatio: aspectRatio,
+          })
+        }
+      }
+    }
+  });
+  optionsMap.set('aspectRatio', aspectRatioInput);
+
+  createMenuOption({
+    parentContainer: container,
+    header: "Scaling",
+    children: [
+      widthInput,
+      heightInput,
+      flipXInput,
+      flipYInput,
+      aspectRatioInput,
+    ],
+  });
+
+  const croppingInput = createLabeledInput({
+    type: "checkbox",
+    id: "cropImage",
+    value: false,
+    label: "Crop Image?",
+    callback: {
+      eventType: "change",
+      callbackFunc: (e) => {
+        cropping = e.target.checked;
+      }
+    }
+  });
+  optionsMap.set('croppingInput', croppingInput);
+
+  const croppingWidthInput = createLabeledInput({
+    type: "text",
+    id: "cropWidth",
+    value: "0",
+    label: "Crop Width",
+    callback: {
+      eventType: "input",
+      callbackFunc: (e) => {
+        cropMedia({
+          media: media,
+          width: e.target.value
+        });
+      }
+    }
+  });
+  optionsMap.set('croppingWidth', croppingWidthInput);
+
+  const croppingHeightInput = createLabeledInput({
+    type: "text",
+    id: "cropHeight",
+    value: "0",
+    label: "Crop Height",
+  });
+  optionsMap.set('croppingHeight', croppingHeightInput);
+
+  const cropOffsetXInput = createLabeledInput({
+    type: "text",
+    id: "cropOffsetX",
+    value: "0",
+    label: "X Offset",
+  });
+  optionsMap.set('cropOffsetX', cropOffsetXInput);
+
+  const cropOffsetYInput = createLabeledInput({
+    type: "text",
+    id: "cropOffsetY",
+    value: "0",
+    label: "Y Offset",
+  });
+  optionsMap.set('cropOffsetY', cropOffsetYInput);
+
+  createMenuOption({
+    parentContainer: container,
+    header: "Cropping",
+    children: [
+      croppingInput,
+      croppingWidthInput,
+      croppingHeightInput,
+      cropOffsetXInput,
+      cropOffsetYInput,
+    ],
+  });
+}
+
 function loadImageFfmpegOptions() {
   const loadedFfmpegOptions = document.getElementById("loadedFfmpegOptions");
-  const image = document.getElementById("imageView");
+  const image = document.getElementById("canvas");
   const imageWidth = image.width;
   const imageHeight = image.height;
 
@@ -226,7 +415,7 @@ function loadVideoFfmpegOptions() {
   const audioInput = createLabeledInput({
     type: "number",
     id: "videoAudio",
-    value: 100,
+    value: 75,
     label: "Audio Volume",
     maximum: 100,
     minimum: 0,
@@ -239,193 +428,332 @@ function loadVideoFfmpegOptions() {
   });
 }
 
-function renderDefaultVisualFfmpegOptions(width, height, media, container) {
-  const widthInput = createLabeledInput({
-    type: "number",
-    id: "imageWidthInput",
-    value: width,
-    label: "Width",
+let controlsCreated = false;
+let currentVideoTimeInSeconds = 0;
+let videoWasPlayingOnChange = false;
+
+function createVideoControls(container, video) {
+  if (controlsCreated) {
+    return;
+  }
+
+  video.addEventListener("timeupdate", function () {
+    currentVideoTimeInSeconds = video.currentTime;
+    playbackSlider.value = currentVideoTimeInSeconds;
+    convertSliderValToVideoTime(playbackSlider.value, playbackTimeMarker);
+    updateSlider(playbackSlider, "#ad3a48", "gray");
   });
 
-  const heightInput = createLabeledInput({
-    type: "number",
-    id: "imageHeightInput",
-    value: height,
-    label: "Height",
+  const videoDuration = video.duration;
+
+  const videoControlsContainer = document.createElement("div");
+  videoControlsContainer.id = "videoControlsContainer"
+  videoControlsContainer.className = "video-controls-container";
+
+  const playbackTimeAdjustmentContainer = createElement({
+    element: "div",
+    className: "playback-time-adjustment-container",
   });
 
-  const flipXInput = createLabeledInput({
-    type: "checkbox",
-    id: "flipX",
-    value: false,
-    label: "Flip X axis?",
-    callback: {
-      eventType: "change",
-      callbackFunc: (event) => {
-        if (event.target.checked) {
-          media.style.transform = "scaleX(-1)";
-        } else {
-          media.style.transform = "scaleX(1)";
-        }
+  const playbackTimeMarker = createElement({
+    element: "p",
+    id: "playbackTimeMarker",
+    innerHTML: "00:00:00",
+  });
+
+  const playbackSlider = createElement({
+    element: "input",
+    type: "range",
+    id: "playbackSlider",
+    min: 0,
+    max: videoDuration,
+    value: 0,
+    callbacks: [
+      {
+        eventType: "input",
+        callbackFunc: (event) => {
+          videoWasPlayingOnChange = !video.paused;
+          video.pause();
+          convertSliderValToVideoTime(
+            parseInt(event.target.value),
+            playbackTimeMarker
+          );
+          updateSlider(playbackSlider, "#ad3a48", "gray");
+          toggleButtonText(video, playButton);
+        },
       },
-    },
-  });
-
-  const flipYInput = createLabeledInput({
-    type: "checkbox",
-    id: "flipY",
-    value: false,
-    label: "Flip Y axis?",
-  });
-
-  const aspectRatioInput = createLabeledInput({
-    type: "checkbox",
-    id: "aspectRatioMaintained",
-    value: true,
-    label: "Maintain Aspect Ratio?",
-  });
-
-  createMenuOption({
-    parentContainer: container,
-    header: "Scaling",
-    children: [
-      widthInput,
-      heightInput,
-      flipXInput,
-      flipYInput,
-      aspectRatioInput,
+      {
+        eventType: "change",
+        callbackFunc: (event) => {
+          video.currentTime = parseInt(event.target.value);
+          if (videoWasPlayingOnChange) {
+            video.play();
+          }
+          videoWasPlayingOnChange = false; // Reset the boolean
+          toggleButtonText(video, playButton);
+        },
+      },
     ],
   });
 
-  const croppingInput = createLabeledInput({
-    type: "checkbox",
-    id: "cropImage",
-    value: false,
-    label: "Crop Image?",
+  updateSlider(playbackSlider, "#ad3a48", "gray");
+
+  playbackTimeAdjustmentContainer.appendChild(playbackSlider);
+  playbackTimeAdjustmentContainer.appendChild(playbackTimeMarker);
+
+  const videoControls = createElement({
+    element: "div",
+    className: "video-controls",
   });
 
-  const croppingWidthInput = createLabeledInput({
-    type: "text",
-    id: "cropWidth",
-    value: "0",
-    label: "Crop Width",
+  const holderDiv = createElement({
+    element: "div",
+    styles: [{ display: "flex" }, { alignItems: "center" }, { gap: "8px" }],
   });
 
-  const croppingHeightInput = createLabeledInput({
-    type: "text",
-    id: "cropHeight",
-    value: "0",
-    label: "Crop Height",
-  });
-
-  const cropOffsetXInput = createLabeledInput({
-    type: "text",
-    id: "cropOffsetX",
-    value: "0",
-    label: "X Offset",
-  });
-
-  const cropOffsetYInput = createLabeledInput({
-    type: "text",
-    id: "cropOffsetY",
-    value: "0",
-    label: "Y Offset",
-  });
-
-  createMenuOption({
-    parentContainer: container,
-    header: "Cropping",
-    children: [
-      croppingInput,
-      croppingWidthInput,
-      croppingHeightInput,
-      cropOffsetXInput,
-      cropOffsetYInput,
+  const prevSecBtn = createElement({
+    element: "button",
+    className: "video-control-button",
+    innerHTML: "<< Sec",
+    callbacks: [
+      {
+        eventType: "click",
+        callbackFunc: (event) => {
+          prevSec(video);
+          playbackSlider.value -= 1;
+          updateSlider(playbackSlider, "#ad3a48", "gray");
+          convertSliderValToVideoTime(playbackSlider.value, playbackTimeMarker);
+          toggleButtonText(video, playButton);
+        },
+      },
     ],
   });
-}
 
-function createMenuOption(details) {
-  const parentContainer = details.parentContainer;
-  const menuOptionContainer = document.createElement("div");
-  const header = document.createElement("h1");
-  header.innerHTML = details.header;
-  header.className = "menuOptionHeader";
-  menuOptionContainer.appendChild(header);
-
-  details.children.forEach((child) => {
-    menuOptionContainer.appendChild(child);
+  const audioSlider = createElement({
+    element: "input",
+    type: "range",
+    id: "audioSlider",
+    min: 0,
+    max: 100,
+    value: 75,
+    callbacks: [
+      {
+        eventType: "input",
+        callbackFunc: (event) => {
+          video.volume = event.target.value / 100;
+          updateSlider(event.target, "#ad3a48", "gray");
+        },
+      },
+    ],
   });
 
-  parentContainer.className = "menuOption";
-  parentContainer.appendChild(menuOptionContainer);
-}
+  updateSlider(audioSlider, "#ad3a48", "gray");
 
-function createLabeledInput(details) {
-  const inputElement = document.createElement("input");
+  const playButton = createElement({
+    element: "button",
+    className: "video-control-button",
+    id: "playButton",
+    innerHTML: "Play",
+    callbacks: [
+      {
+        eventType: "click",
+        callbackFunc: (event) => {
+          toggleVideoFromSelectedSecond(video, event.target);
+        },
+      },
+    ],
+  });
 
-  inputElement.type = details.type;
-  inputElement.id = details.id;
-
-  if (details.type === "text" || details.type === "number") {
-    inputElement.value = details.value;
-  } else if (details.type === "checkbox") {
-    inputElement.checked = details.value;
-  }
-
-  if (details.maximum !== undefined) {
-    inputElement.max = details.maximum;
-
-    inputElement.addEventListener("input", function () {
-      const max = parseFloat(this.max);
-
-      if (this.valueAsNumber > max) {
-        this.value = max;
+  const nextSecBtn = createElement({
+    element: "button",
+    className: "video-control-button",
+    innerHTML: ">> Sec",
+    callbacks: [
+      {
+        eventType: "click",
+        callbackFunc: (event) => {
+          nextSec(video);
+          playbackSlider.value += 1;
+          updateSlider(playbackSlider, "#ad3a48", "gray");
+          convertSliderValToVideoTime(playbackSlider.value, playbackTimeMarker);
+          toggleButtonText(video, playButton);
+        }
       }
-    });
-  }
+    ]
+  });
 
-  if (details.minimum !== undefined) {
-    inputElement.min = details.minimum;
+  holderDiv.appendChild(prevSecBtn);
+  holderDiv.appendChild(audioSlider);
 
-    inputElement.addEventListener("input", function () {
-      const min = parseFloat(this.min);
+  videoControls.appendChild(holderDiv);
+  videoControls.appendChild(playButton);
+  videoControls.appendChild(nextSecBtn);
 
-      if (this.valueAsNumber < min) {
-        this.value = min;
-      }
-    });
-  }
+  videoControlsContainer.appendChild(playbackTimeAdjustmentContainer);
+  videoControlsContainer.appendChild(videoControls);
 
-  if (details.callback !== undefined) {
-    console.log("event callback found for element", inputElement);
-    const eventType = details.callback.eventType;
-    const callbackFunc = details.callback.callbackFunc;
-    inputElement.addEventListener(eventType, callbackFunc);
-  }
+  container.appendChild(videoControlsContainer);
 
-  const labeledInput = document.createElement("div");
-  const label = document.createElement("p");
-  label.innerHTML = details.label;
-  labeledInput.className = "labeledInput";
-  labeledInput.appendChild(label);
-  labeledInput.appendChild(inputElement);
-
-  return labeledInput;
+  controlsCreated = true;
 }
 
-function createVideoControls(container) {
-  const videoControls = document.createElement("div");
-  videoControls.id = "videoControls";
-  videoControls.className = "videoControls";
-
-  const startOver = document.createElement('button');
-  const playButton = document.createElement('button');
-  const audioSlider = document.createElement('input');
+function deleteVideoControls(container) {
+  const videoControls = document.getElementById('videoControlsContainer');
+  container.removeChild(videoControls);
+  controlsCreated = false;
+  currentVideoTimeInSeconds = 0;
 }
 
+function prevSec(video) {
+  video.pause();
+  video.currentTime -= 1;
+  currentVideoTimeInSeconds -= 1;
+}
 
-document.getElementById("playbackSlider").oninput = function() {
-  var value = (this.value-this.min)/(this.max-this.min)*100
-  this.style.background = 'linear-gradient(to right, #ad3a48 0%, #ad3a48 ' + value + '%, #fff ' + value + '%, white 100%)'
-};
+function nextSec(video) {
+  video.pause();
+  video.currentTime += 1;
+  currentVideoTimeInSeconds += 1;
+}
+
+function convertSliderValToVideoTime(valInSeconds, elementToDisplayTime) {
+  let videoSecondsIn = valInSeconds % 60;
+  let videoMinutesIn = Math.floor((valInSeconds / 60) % 60);
+  let videoHoursIn = Math.floor(valInSeconds / (60 * 60));
+
+  let displayedSecondsIn =
+    videoSecondsIn < 10 ? `0${videoSecondsIn}` : `${videoSecondsIn}`;
+  let displayedMinutesIn =
+    videoMinutesIn < 10 ? `0${videoMinutesIn}` : `${videoMinutesIn}`;
+  let displayedHoursIn =
+    videoHoursIn < 10 ? `0${videoHoursIn}` : `${videoHoursIn}`;
+
+  let displayedHhMmSs = `${displayedHoursIn}:${displayedMinutesIn}:${displayedSecondsIn}`;
+
+  elementToDisplayTime.innerHTML = displayedHhMmSs;
+}
+
+function toggleVideoFromSelectedSecond(video, button) {
+  if (video.paused) {
+    video.play();
+    toggleButtonText(video, button);
+  } else {
+    video.pause();
+    toggleButtonText(video, button);
+  }
+}
+
+function toggleButtonText(video, button) {
+  if (video.paused) {
+    button.innerHTML = "Play";
+  } else {
+    button.innerHTML = "Pause";
+  }
+}
+
+function updateSlider(track, color1, color2) {
+  let value = ((track.value - track.min) / (track.max - track.min)) * 100;
+  let gradientStyle = `linear-gradient(to right, ${color1} ${value}%, ${color2} ${value}%)`;
+
+  track.style.background = gradientStyle;
+}
+
+function resizeMediaAndContainer(details) {
+  const media = details.media;
+  const mediaContainer = details.mediaContainer;
+  const widthInput = document.getElementById('mediaWidthInput');
+  const heightInput = document.getElementById('mediaHeightInput');
+  const aspectRatio = details.aspectRatio;
+
+  console.log(details.width);
+
+  if (details.maintainAspectRatio) {
+    if (details.width !== undefined) {
+      media.style.width = `${details.width}px`;
+      mediaContainer.style.width = `${details.width}px`;
+
+      const newHeight = calcOtherDimWithRatio(parseInt(details.width), aspectRatio, true);
+      media.style.height = `${newHeight}px`;
+      mediaContainer.style.height = `${newHeight}px`;
+      heightInput.value = newHeight;
+    }
+
+    if (details.height !== undefined) {
+      media.style.height = `${details.height}px`;
+      mediaContainer.style.height = `${details.height}px`;
+
+      const newWidth = calcOtherDimWithRatio(parseInt(details.height), aspectRatio, false);
+      media.style.width = `${newWidth}px`;
+      mediaContainer.style.width = `${newWidth}px`;
+      widthInput.value = newWidth;
+    }
+  } else {
+    if (details.width !== undefined) {
+      media.style.width = `${details.width}px`;
+      mediaContainer.style.width = `${details.width}px`;
+    }
+
+    if (details.height !== undefined) {
+      media.style.height = `${details.height}px`;
+      mediaContainer.style.height = `${details.height}px`;
+    }
+  }
+}
+
+function cropMedia(details) {
+  const media = details.media;
+
+  if (details.width !== undefined) {
+    console.log(media);
+    const width = details.width;
+    media.style.width = width;
+  }
+
+  if (details.height !== undefined) {
+    media.style.height = details.height;
+  }
+
+  if (details.offX !== undefined) {
+    media.style.left = `${details.offX}px`;
+  }
+
+  if (details.offY !== undefined) {
+    media.style.top = `${details.offY}px`;
+  }
+}
+
+function convertMedia(filepath, extension) {
+  const type = determineMediaType(extension);
+
+
+  switch (type) {
+    case "image": {
+      const widthInput = optionsMap.get('widthInput').querySelector('input');
+      const heightInput = optionsMap.get('heightInput').querySelector('input');
+      const flipXInput = optionsMap.get('flipXInput').querySelector('input[type="checkbox"]');
+      console.log(flipXInput);
+      const flipYInput = optionsMap.get('flipYInput').querySelector('input[type="checkbox"]');
+      const aspectRatio = optionsMap.get('aspectRatio').querySelector('input');
+      const croppingInput = optionsMap.get('croppingInput').querySelector('input[type="checkbox"]');
+      const croppingWidthInput = optionsMap.get('croppingWidth').querySelector('input');
+      const croppingHeightInput = optionsMap.get('croppingHeight').querySelector('input');
+      const cropOffsetXInput = optionsMap.get('cropOffsetX').querySelector('input');
+      const cropOffsetYInput = optionsMap.get('cropOffsetY').querySelector('input');
+
+      api.convertFile(filepath, {
+        extension: extension,
+        newExtension: dropdownFileTypes.value || null,
+        width: widthInput.value || null,
+        height: heightInput.value || null,
+        flipX: flipXInput.checked,
+        flipY: flipYInput.checked,
+        aspectRatioMaintained: aspectRatio.checked || null,
+        cropping: croppingInput.checked,
+        croppingWidth: croppingWidthInput.value || null,
+        croppingHeight: croppingHeightInput.value || null,
+        cropOffsetX: cropOffsetXInput.value || null,
+        cropOffsetY: cropOffsetYInput.value || null,
+      });
+    }
+  }
+}

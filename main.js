@@ -27,6 +27,22 @@ function createWindow() {
     }
   });
 
+  ipcMain.handle("convertFile", async (event, filepath, options) => {
+    try {
+      if (!filepath || filepath.length === 0) throw new Error("Error in filepath, not received or empty");
+      if (!options) throw new Error("Error in media options, not found");
+
+      const convertedFfmpegOptions = convertFfmpegOptions(options);
+
+      const result = await convertFile(filepath, options, convertedFfmpegOptions);
+      console.log("result", result);
+      return result;
+    } catch (err) {
+      console.error("Error in file conversion", err);
+      throw err;
+    }
+  });
+
   win.loadFile("./public/index.html");
 }
 
@@ -63,4 +79,63 @@ async function openExplorerForResults() {
 
   const filepath = filePaths[0];
   window.webContents.send("file-loaded", filepath);
+}
+
+async function convertFile(filepath, options, convertedFfmpegOptions) {
+  const parentPath = path.dirname(filepath);
+  let newNameWithNewExtension = filepath.split(".")[0].split("\\").pop();
+  newNameWithNewExtension += `.${options.newExtension}`;
+  const outputPath = path.join(parentPath, newNameWithNewExtension);
+
+  return new Promise((resolve, reject) => {
+    ffmpeg.ffmpeg(filepath, [
+      convertedFfmpegOptions
+    ], outputPath, function(progress) {
+      console.log(progress);
+    }).success(function (json) {
+      console.log(json);
+      resolve(json);
+    }).error(function (error) {
+      console.error('conversion error:', error);
+      reject(new Error("FFMPEG conversion failed: " + error.message));
+    })
+  });
+}
+
+function convertFfmpegOptions(options) {
+  console.log(options)
+
+  let ffmpegOptions = "-vf ";
+
+  // Optionals
+  const width = options.width || null;
+  const height = options.height || null;
+  const flipX = options.flipX || null;
+  const flipY = options.flipY || null;
+  const aspectRatioMaintained = options.aspectRatioMaintained || null;
+  const cropping = options.cropping || null;
+  const cropWidth = options.croppingWidth || null;
+  const cropHeight = options.croppingHeight || null;
+  const cropOffsetX = options.cropOffsetX || null;
+  const cropOffsetY = options.cropOffsetY || null;
+
+  if (width && height) {
+    ffmpegOptions += `scale=${width}:${height}`;
+  } 
+
+  if (flipX === true){
+    ffmpegOptions += `hflip, `;
+  }
+
+  if (flipY === true){
+    ffmpegOptions += `vflip, `;
+  }
+
+  if (cropping === true) {
+    if (cropWidth && cropHeight && cropOffsetX && cropOffsetY) {
+      ffmpegOptions += `crop=${cropWidth}:${cropHeight}:${cropOffsetX}:${cropOffsetY}"`;
+    }
+  }
+
+  return ffmpegOptions;
 }

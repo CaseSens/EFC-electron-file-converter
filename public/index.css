@@ -195,31 +195,41 @@ input[type="checkbox"] {
 .mediaContainerContainer {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
   background-color: #457EAC;
-  width: 76vw;
-  height: 100%;
+  width: 130vw;
+  overflow-x: auto;
+  overflow-y: auto;
+  transform-origin: left;
+  transform: scale(1);
+}
+
+#testDiv {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 12vh;
+
 }
 
 #mediaContainer {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 640px;
   height: 480px;
-  overflow: hidden;
   text-align: center;
 	margin: 18px;
+  overflow: hidden;
 }
 
-#mediaContainer img,
-#mediaContainer video {
-  max-width: 100%;
-  max-height: 100%;
-  height: auto; /* Maintain the aspect ratio */
-  width: auto; /* Maintain the aspect ratio */
-  object-fit: contain; /* Ensures the content is scaled properly */
+.test {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 640px;
+  height: 480px;
+  text-align: center;
 }
 
 .mediaContainerEmpty {
@@ -280,13 +290,22 @@ input[type="checkbox"] {
 
 .video-controls-container {
   display: flex;
-}
-
-.playback-controls-container {
-  display: flex;
   flex-direction: column;
   width: 640px;
   gap: 8px;
+}
+
+.playback-time-adjustment-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 24px;
+  gap: 8px;
+  text-align: center;
+}
+.playback-time-adjustment-container p {
+  height: 100%;
 }
 
 #playbackSlider {
@@ -300,6 +319,38 @@ input[type="checkbox"] {
   -webkit-appearance: none;
 }
 
+#playbackSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  background: #ad3a48;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  border-radius: 50%;
+}
+
+#audioSlider {
+  background: #fff;
+  border: solid 1px #000000;
+  border-radius: 8px;
+  height: 8px;
+  width: 90px;
+  outline: none;
+  transition: background 450ms ease-in;
+  -webkit-appearance: none;
+  margin-right: -90px; /* Ensure play button won't be affected by audio slider width */
+}
+
+#audioSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  background: #ad3a48;
+  width: 12px;
+  height: 12px;
+  cursor: pointer;
+  border-radius: 50%;
+}
+
 .video-controls {
   display: flex;
   align-items: center;
@@ -309,7 +360,12 @@ input[type="checkbox"] {
 .video-control-button {
   border: none;
   cursor: pointer;
-  width: 60px;
+  width: 90px;
   height: 24px;
   border-radius: 2px;
+  text-align: center;
+}
+
+#playButton {
+
 }

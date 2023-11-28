@@ -9,4 +9,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     }
   },
   onFileLoaded: (callback) => ipcRenderer.on("file-loaded", callback),
+  convertFile: (filepath, args) => {
+    return ipcRenderer.invoke('convertFile', filepath, args);
+  }
 });

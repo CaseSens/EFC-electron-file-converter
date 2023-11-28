@@ -15,6 +15,8 @@
       integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
       crossorigin="anonymous"
     ></script>
+    <script src="HtmlElementFactory.js" defer></script>
+    <script src="scripts.js" defer></script>
     <script src="index.js" defer></script>
   </head>
   <body>
@@ -43,31 +45,23 @@
           <button id="convert" class="menuButton d-none">Convert</button>
         </div>
         <div id="mediaContainerContainer" class="mediaContainerContainer">
-          <p style="font-weight: bold">Source preview</p>
-          <div id="mediaContainer" class="mediaContainerEmpty">
-            <div
-              style="
-                display: flex;
-                flex-direction: column;
-                gap: 4px;
-                align-items: center;
-              "
-            >
-              <p style="font-weight: 500;">
-                Click the "Load File" button in the left menu to load a file
-              </p>
-              <p style="font-weight: lighter">
-                Or simply drag and drop a file into the container
-              </p>
-            </div>
-          </div>
-          <div class="video-controls-container">
-            <div class="playback-controls-container">
-              <input type="range" id="playbackSlider" min="0" max="100" value="0">
-              <div class="video-controls">
-                <button class="video-control-button"><<</button>
-                <button class="video-control-button">Play</button>
-                <button class="video-control-button">>></button>
+          <div id="testDiv">
+            <p id="previewText" style="font-weight: bold;">Source preview</p>
+            <div id="mediaContainer" class="mediaContainerEmpty">
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 4px;
+                  align-items: center;
+                "
+              >
+                <p style="font-weight: 500;">
+                  Click the "Load File" button in the left menu to load a file
+                </p>
+                <p style="font-weight: lighter">
+                  Or simply drag and drop a file into the container
+                </p>
               </div>
             </div>
           </div>
