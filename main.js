@@ -27,14 +27,30 @@ function createWindow() {
     }
   });
 
-  ipcMain.handle("convertFile", async (event, filepath, options) => {
+  ipcMain.handle("convertImage", async (event, filepath, options) => {
     try {
       if (!filepath || filepath.length === 0) throw new Error("Error in filepath, not received or empty");
       if (!options) throw new Error("Error in media options, not found");
 
-      const convertedFfmpegOptions = convertFfmpegOptions(options);
+      const convertedFfmpegOptions = convertFfmpegImageOptions(options);
 
-      const result = await convertFile(filepath, options, convertedFfmpegOptions);
+      const result = await convertMedia(filepath, options, convertedFfmpegOptions);
+      console.log("result", result);
+      return result;
+    } catch (err) {
+      console.error("Error in file conversion", err);
+      throw err;
+    }
+  });
+
+  ipcMain.handle("convertVideo", async (event, filepath, options) => {
+    try {
+      if (!filepath || filepath.length === 0) throw new Error("Error in filepath, not received or empty");
+      if (!options) throw new Error("Error in media options, not found");
+
+      const convertedFfmpegOptions = convertFfmpegVideoOptions(options);
+
+      const result = await convertMedia(filepath, options, convertedFfmpegOptions);
       console.log("result", result);
       return result;
     } catch (err) {
@@ -81,11 +97,13 @@ async function openExplorerForResults() {
   window.webContents.send("file-loaded", filepath);
 }
 
-async function convertFile(filepath, options, convertedFfmpegOptions) {
+async function convertMedia(filepath, options, convertedFfmpegOptions) {
   const parentPath = path.dirname(filepath);
   let newNameWithNewExtension = filepath.split(".")[0].split("\\").pop();
   newNameWithNewExtension += `.${options.newExtension}`;
   const outputPath = path.join(parentPath, newNameWithNewExtension);
+
+  console.log('finalized ffmpeg command:', ("ffmpeg -i " + filepath + " " + convertedFfmpegOptions + " -y " + outputPath));
 
   return new Promise((resolve, reject) => {
     ffmpeg.ffmpeg(filepath, [
@@ -102,9 +120,7 @@ async function convertFile(filepath, options, convertedFfmpegOptions) {
   });
 }
 
-function convertFfmpegOptions(options) {
-  console.log(options)
-
+function convertFfmpegImageOptions(options) {
   let ffmpegOptions = "-vf ";
 
   // Optionals
@@ -118,24 +134,114 @@ function convertFfmpegOptions(options) {
   const cropHeight = options.croppingHeight || null;
   const cropOffsetX = options.cropOffsetX || null;
   const cropOffsetY = options.cropOffsetY || null;
+  
+  console.log('options:', options);
 
   if (width && height) {
+    ffmpegOptions = addCommaIfNecessary(ffmpegOptions, "-vf ");
     ffmpegOptions += `scale=${width}:${height}`;
   } 
 
   if (flipX === true){
-    ffmpegOptions += `hflip, `;
+    ffmpegOptions = addCommaIfNecessary(ffmpegOptions, "-vf ");
+    ffmpegOptions += `hflip`;
   }
 
   if (flipY === true){
-    ffmpegOptions += `vflip, `;
+    ffmpegOptions = addCommaIfNecessary(ffmpegOptions, "-vf ");
+    ffmpegOptions += `vflip`;
   }
 
   if (cropping === true) {
     if (cropWidth && cropHeight && cropOffsetX && cropOffsetY) {
-      ffmpegOptions += `crop=${cropWidth}:${cropHeight}:${cropOffsetX}:${cropOffsetY}"`;
+      addCommaIfNecessary(ffmpegOptions, "-vf ");
+      ffmpegOptions += `crop=${cropWidth}:${cropHeight}:${cropOffsetX}:${cropOffsetY}`;
     }
   }
 
   return ffmpegOptions;
+}
+
+function convertFfmpegVideoOptions(options) {
+  let ffmpegOptions = "-vf ";
+
+  // Optionals
+  const width = options.width || null;
+  const height = options.height || null;
+  const flipX = options.flipX || null;
+  const flipY = options.flipY || null;
+  const aspectRatioMaintained = options.aspectRatioMaintained || null;
+  const cropping = options.cropping || null;
+  const cropWidth = options.croppingWidth || null;
+  const cropHeight = options.croppingHeight || null;
+  const cropOffsetX = options.cropOffsetX || null;
+  const cropOffsetY = options.cropOffsetY || null;
+  const volume = options.volume;
+  const removeAudio = options.removeAudio;
+  const audioFormat = options.audioFormat;
+
+  console.log('options:', options);
+
+  if (width && height) {
+    ffmpegOptions = addCommaIfNecessary(ffmpegOptions, "-vf ");
+    ffmpegOptions += `scale=${width}:${height}`;
+  } 
+
+  if (flipX === true){
+    ffmpegOptions = addCommaIfNecessary(ffmpegOptions, "-vf ");
+    ffmpegOptions += `hflip`;
+  }
+
+  if (flipY === true){
+    ffmpegOptions = addCommaIfNecessary(ffmpegOptions, "-vf ");
+    ffmpegOptions += `vflip`;
+  }
+
+  if (cropping === true) {
+    if (cropWidth && cropHeight && cropOffsetX && cropOffsetY) {
+      addCommaIfNecessary(ffmpegOptions, "-vf ");
+      ffmpegOptions += `crop=${cropWidth}:${cropHeight}:${cropOffsetX}:${cropOffsetY}`;
+    }
+  }
+
+  // Audio
+  if (removeAudio !== true) {
+    ffmpegOptions += ` -af volume=${volume}`;
+    const audioCodec = determineAudioCodec(audioFormat);
+    ffmpegOptions += ` -c:a ${audioCodec} -q:a 2`;
+
+  } else {
+    ffmpegOptions += ` -an`;
+  }
+
+
+  return ffmpegOptions;
+}
+
+/**
+ * Adds "," if string doesn't end with target
+ */
+function addCommaIfNecessary(str, target) {
+  if (!str.endsWith(target)) {
+    return str + ",";
+  }
+  return str;
+}
+
+function determineAudioCodec(audioFormat) {
+  switch (audioFormat) {
+    case "MP3": return "libmp3lame"
+    case "WAV": return "pcm_s16le"
+    case "AAC": return "aac"
+    case "FLAC": return "flac"
+    case "OGG": return "libvorbis"
+    case "AC3": return "ac3"
+    case "WMA": return "wmav2"
+    case "DTS": return "dts"
+    case "TrueHD": return "truehd"
+    case "ALAC": return "alac"
+    case "VORBIS": return "libvorbis"
+    case "OPUS": return "libopus"
+    default: return "libmp3lame"
+  }
 }

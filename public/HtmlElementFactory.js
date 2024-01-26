@@ -53,6 +53,7 @@ function createLabeledInput(details) {
 function createMenuOption(details) {
   const parentContainer = details.parentContainer;
   const menuOptionContainer = document.createElement("div");
+  menuOptionContainer.className = "menuOption";
   const header = document.createElement("h1");
   header.innerHTML = details.header;
   header.className = "menuOptionHeader";
@@ -62,7 +63,7 @@ function createMenuOption(details) {
     menuOptionContainer.appendChild(child);
   });
 
-  parentContainer.className = "menuOption";
+  parentContainer.className = "borderedMenu";
   parentContainer.appendChild(menuOptionContainer);
 }
 
@@ -117,4 +118,27 @@ function createElement(details) {
 
 
   return element;
+}
+
+function createLabeledElement(details) {
+  const element = document.createElement(details.type);
+  element.id = details.id;
+
+  if (details.type === "select") {
+    element.className = "form-select-sm";
+    details.values.forEach(value => {
+      const option = document.createElement('option');
+      option.innerHTML = value;
+      element.appendChild(option);
+    });
+  }
+
+  const labeledElement = document.createElement("div");
+  const label = document.createElement("p");
+  label.innerHTML = details.label;
+  labeledElement.className = "labeledInput";
+  labeledElement.appendChild(label);
+  labeledElement.appendChild(element);
+
+  return labeledElement;
 }

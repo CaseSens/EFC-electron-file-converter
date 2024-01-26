@@ -2,6 +2,12 @@ let mediaFilepath = "";
 const convertBtn = document.getElementById("convert");
 const dropdownFileTypes = document.getElementById("optionsSelect");
 
+dropdownFileTypes.onchange = () => {
+  resetAudioFormats();
+}
+
+let supportedCodecs = [];
+
 let optionsMap = new Map();
 
 let scale = 1;
@@ -12,7 +18,6 @@ const mediaContainerContainer = document.getElementById(
 
 const btnLoadFile = document.getElementById("loadFile");
 const mediaContainer = document.getElementById("mediaContainer");
-
 
 const api = window.electronAPI;
 
@@ -97,15 +102,14 @@ function displayMedia(filepath, extension) {
 
   mediaContainer.innerHTML = "";
 
-
   if (element instanceof HTMLImageElement) {
     element.onload = () => {
-      const canvas = document.createElement('canvas');
+      const canvas = document.createElement("canvas");
       canvas.width = element.naturalWidth;
       canvas.height = element.naturalHeight;
-      canvas.id = 'canvas';
+      canvas.id = "canvas";
 
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext("2d");
       ctx.drawImage(element, 0, 0);
       mediaContainer.appendChild(canvas);
       mediaContainer.style.width = `${element.naturalWidth}px`;
@@ -114,7 +118,7 @@ function displayMedia(filepath, extension) {
       convertBtn.classList.remove("d-none");
     };
   } else if (element instanceof HTMLVideoElement) {
-    const testDiv = document.getElementById('testDiv');
+    const testDiv = document.getElementById("testDiv");
     element.oncanplay = () => {
       if (controlsCreated) {
         deleteVideoControls(testDiv);
@@ -131,7 +135,7 @@ function displayMedia(filepath, extension) {
 
   convertBtn.onclick = () => {
     convertMedia(filepath, extension);
-  }
+  };
 }
 
 function loadElementsAfterFileLoad(filetype, extension) {
@@ -165,21 +169,21 @@ function loadSelectMenu(filetype, extension) {
   let options = [];
 
   if (filetype === "image") {
-    options.push(extension);
+    // options.push(extension);
     imgPossibilities.forEach((type) => {
       if (type !== extension) {
         options.push(type);
       }
     });
   } else if (filetype === "video") {
-    options.push(extension);
+    // options.push(extension);
     vidPossibilities.forEach((type) => {
       if (type !== extension) {
         options.push(type);
       }
     });
   } else if (filetype === "audio") {
-    options.push(extension);
+    // options.push(extension);
     audioPossibilities.forEach((type) => {
       if (type !== extension) {
         options.push(type);
@@ -194,6 +198,7 @@ function loadSelectMenu(filetype, extension) {
     newOption.innerHTML = option;
     dropdownFileTypes.appendChild(newOption);
   });
+
 }
 
 /* ------------------------------------------------- */
@@ -220,11 +225,11 @@ function renderDefaultVisualFfmpegOptions(width, height, media, container) {
           mediaContainer: mediaContainer,
           maintainAspectRatio: aspectRatioMaintained,
           aspectRatio: aspectRatio,
-        })
-      }
-    }
+        });
+      },
+    },
   });
-  optionsMap.set('widthInput', widthInput);
+  optionsMap.set("widthInput", widthInput);
 
   const heightInput = createLabeledInput({
     type: "number",
@@ -240,11 +245,11 @@ function renderDefaultVisualFfmpegOptions(width, height, media, container) {
           mediaContainer: mediaContainer,
           maintainAspectRatio: aspectRatioMaintained,
           aspectRatio: aspectRatio,
-        })
-      }
-    }
+        });
+      },
+    },
   });
-  optionsMap.set('heightInput', heightInput);
+  optionsMap.set("heightInput", heightInput);
 
   const flipXInput = createLabeledInput({
     type: "checkbox",
@@ -255,12 +260,12 @@ function renderDefaultVisualFfmpegOptions(width, height, media, container) {
       eventType: "change",
       callbackFunc: (event) => {
         const flipX = event.target.checked ? -1 : 1;
-        const flipY = document.getElementById('flipY').checked ? -1 : 1;
+        const flipY = document.getElementById("flipY").checked ? -1 : 1;
         media.style.transform = `scaleX(${flipX}) scaleY(${flipY})`;
       },
     },
   });
-  optionsMap.set('flipXInput', flipXInput);
+  optionsMap.set("flipXInput", flipXInput);
 
   const flipYInput = createLabeledInput({
     type: "checkbox",
@@ -271,12 +276,12 @@ function renderDefaultVisualFfmpegOptions(width, height, media, container) {
       eventType: "change",
       callbackFunc: (event) => {
         const flipY = event.target.checked ? -1 : 1;
-        const flipX = document.getElementById('flipX').checked ? -1 : 1;
+        const flipX = document.getElementById("flipX").checked ? -1 : 1;
         media.style.transform = `scaleX(${flipX}) scaleY(${flipY})`;
-      }
-    }
+      },
+    },
   });
-  optionsMap.set('flipYInput', flipYInput);
+  optionsMap.set("flipYInput", flipYInput);
 
   const aspectRatioInput = createLabeledInput({
     type: "checkbox",
@@ -289,17 +294,17 @@ function renderDefaultVisualFfmpegOptions(width, height, media, container) {
         aspectRatioMaintained = !aspectRatioMaintained;
         if (aspectRatioMaintained) {
           resizeMediaAndContainer({
-            width: document.getElementById('mediaWidthInput').value,
+            width: document.getElementById("mediaWidthInput").value,
             media: media,
             mediaContainer: mediaContainer,
             maintainAspectRatio: aspectRatioMaintained,
             aspectRatio: aspectRatio,
-          })
+          });
         }
-      }
-    }
+      },
+    },
   });
-  optionsMap.set('aspectRatio', aspectRatioInput);
+  optionsMap.set("aspectRatio", aspectRatioInput);
 
   createMenuOption({
     parentContainer: container,
@@ -322,13 +327,13 @@ function renderDefaultVisualFfmpegOptions(width, height, media, container) {
       eventType: "change",
       callbackFunc: (e) => {
         cropping = e.target.checked;
-      }
-    }
+      },
+    },
   });
-  optionsMap.set('croppingInput', croppingInput);
+  optionsMap.set("croppingInput", croppingInput);
 
   const croppingWidthInput = createLabeledInput({
-    type: "text",
+    type: "number",
     id: "cropWidth",
     value: "0",
     label: "Crop Width",
@@ -337,36 +342,36 @@ function renderDefaultVisualFfmpegOptions(width, height, media, container) {
       callbackFunc: (e) => {
         cropMedia({
           media: media,
-          width: e.target.value
+          width: e.target.value,
         });
-      }
-    }
+      },
+    },
   });
-  optionsMap.set('croppingWidth', croppingWidthInput);
+  optionsMap.set("croppingWidth", croppingWidthInput);
 
   const croppingHeightInput = createLabeledInput({
-    type: "text",
+    type: "number",
     id: "cropHeight",
     value: "0",
     label: "Crop Height",
   });
-  optionsMap.set('croppingHeight', croppingHeightInput);
+  optionsMap.set("croppingHeight", croppingHeightInput);
 
   const cropOffsetXInput = createLabeledInput({
-    type: "text",
+    type: "number",
     id: "cropOffsetX",
     value: "0",
     label: "X Offset",
   });
-  optionsMap.set('cropOffsetX', cropOffsetXInput);
+  optionsMap.set("cropOffsetX", cropOffsetXInput);
 
   const cropOffsetYInput = createLabeledInput({
-    type: "text",
+    type: "number",
     id: "cropOffsetY",
     value: "0",
     label: "Y Offset",
   });
-  optionsMap.set('cropOffsetY', cropOffsetYInput);
+  optionsMap.set("cropOffsetY", cropOffsetYInput);
 
   createMenuOption({
     parentContainer: container,
@@ -412,7 +417,7 @@ function loadVideoFfmpegOptions() {
     loadedFfmpegOptions
   );
 
-  const audioInput = createLabeledInput({
+  const volumeInput = createLabeledInput({
     type: "number",
     id: "videoAudio",
     value: 75,
@@ -420,11 +425,30 @@ function loadVideoFfmpegOptions() {
     maximum: 100,
     minimum: 0,
   });
+  optionsMap.set("volume", volumeInput);
+
+  const removeAudioInput = createLabeledInput({
+    type: "checkbox",
+    id: "muteAudio",
+    value: false,
+    label: "Remove Audio Track?",
+  });
+  optionsMap.set("removeAudio", removeAudioInput);
+
+  supportedCodecs = getSupportedCodecs(dropdownFileTypes.options[dropdownFileTypes.selectedIndex].text);
+
+  const audioFormats = createLabeledElement({
+    type: "select",
+    id: "audioFormats",
+    values: supportedCodecs,
+    label: "Select an audio format"
+  });
+  optionsMap.set("audioFormats", audioFormats);
 
   createMenuOption({
     parentContainer: loadedFfmpegOptions,
     header: "Audio",
-    children: [audioInput],
+    children: [volumeInput, removeAudioInput, audioFormats],
   });
 }
 
@@ -447,7 +471,7 @@ function createVideoControls(container, video) {
   const videoDuration = video.duration;
 
   const videoControlsContainer = document.createElement("div");
-  videoControlsContainer.id = "videoControlsContainer"
+  videoControlsContainer.id = "videoControlsContainer";
   videoControlsContainer.className = "video-controls-container";
 
   const playbackTimeAdjustmentContainer = createElement({
@@ -577,9 +601,9 @@ function createVideoControls(container, video) {
           updateSlider(playbackSlider, "#ad3a48", "gray");
           convertSliderValToVideoTime(playbackSlider.value, playbackTimeMarker);
           toggleButtonText(video, playButton);
-        }
-      }
-    ]
+        },
+      },
+    ],
   });
 
   holderDiv.appendChild(prevSecBtn);
@@ -598,7 +622,7 @@ function createVideoControls(container, video) {
 }
 
 function deleteVideoControls(container) {
-  const videoControls = document.getElementById('videoControlsContainer');
+  const videoControls = document.getElementById("videoControlsContainer");
   container.removeChild(videoControls);
   controlsCreated = false;
   currentVideoTimeInSeconds = 0;
@@ -661,8 +685,8 @@ function updateSlider(track, color1, color2) {
 function resizeMediaAndContainer(details) {
   const media = details.media;
   const mediaContainer = details.mediaContainer;
-  const widthInput = document.getElementById('mediaWidthInput');
-  const heightInput = document.getElementById('mediaHeightInput');
+  const widthInput = document.getElementById("mediaWidthInput");
+  const heightInput = document.getElementById("mediaHeightInput");
   const aspectRatio = details.aspectRatio;
 
   console.log(details.width);
@@ -672,7 +696,11 @@ function resizeMediaAndContainer(details) {
       media.style.width = `${details.width}px`;
       mediaContainer.style.width = `${details.width}px`;
 
-      const newHeight = calcOtherDimWithRatio(parseInt(details.width), aspectRatio, true);
+      const newHeight = calcOtherDimWithRatio(
+        parseInt(details.width),
+        aspectRatio,
+        true
+      );
       media.style.height = `${newHeight}px`;
       mediaContainer.style.height = `${newHeight}px`;
       heightInput.value = newHeight;
@@ -682,7 +710,11 @@ function resizeMediaAndContainer(details) {
       media.style.height = `${details.height}px`;
       mediaContainer.style.height = `${details.height}px`;
 
-      const newWidth = calcOtherDimWithRatio(parseInt(details.height), aspectRatio, false);
+      const newWidth = calcOtherDimWithRatio(
+        parseInt(details.height),
+        aspectRatio,
+        false
+      );
       media.style.width = `${newWidth}px`;
       mediaContainer.style.width = `${newWidth}px`;
       widthInput.value = newWidth;
@@ -725,35 +757,126 @@ function cropMedia(details) {
 function convertMedia(filepath, extension) {
   const type = determineMediaType(extension);
 
-
   switch (type) {
-    case "image": {
-      const widthInput = optionsMap.get('widthInput').querySelector('input');
-      const heightInput = optionsMap.get('heightInput').querySelector('input');
-      const flipXInput = optionsMap.get('flipXInput').querySelector('input[type="checkbox"]');
-      console.log(flipXInput);
-      const flipYInput = optionsMap.get('flipYInput').querySelector('input[type="checkbox"]');
-      const aspectRatio = optionsMap.get('aspectRatio').querySelector('input');
-      const croppingInput = optionsMap.get('croppingInput').querySelector('input[type="checkbox"]');
-      const croppingWidthInput = optionsMap.get('croppingWidth').querySelector('input');
-      const croppingHeightInput = optionsMap.get('croppingHeight').querySelector('input');
-      const cropOffsetXInput = optionsMap.get('cropOffsetX').querySelector('input');
-      const cropOffsetYInput = optionsMap.get('cropOffsetY').querySelector('input');
+    case "image":
+      {
+        const widthInput = optionsMap.get("widthInput").querySelector("input");
+        const heightInput = optionsMap
+          .get("heightInput")
+          .querySelector("input");
+        const flipXInput = optionsMap
+          .get("flipXInput")
+          .querySelector('input[type="checkbox"]');
+        console.log(flipXInput);
+        const flipYInput = optionsMap
+          .get("flipYInput")
+          .querySelector('input[type="checkbox"]');
+        const aspectRatio = optionsMap
+          .get("aspectRatio")
+          .querySelector("input");
+        const croppingInput = optionsMap
+          .get("croppingInput")
+          .querySelector('input[type="checkbox"]');
+        const croppingWidthInput = optionsMap
+          .get("croppingWidth")
+          .querySelector("input");
+        const croppingHeightInput = optionsMap
+          .get("croppingHeight")
+          .querySelector("input");
+        const cropOffsetXInput = optionsMap
+          .get("cropOffsetX")
+          .querySelector("input");
+        const cropOffsetYInput = optionsMap
+          .get("cropOffsetY")
+          .querySelector("input");
 
-      api.convertFile(filepath, {
-        extension: extension,
-        newExtension: dropdownFileTypes.value || null,
-        width: widthInput.value || null,
-        height: heightInput.value || null,
-        flipX: flipXInput.checked,
-        flipY: flipYInput.checked,
-        aspectRatioMaintained: aspectRatio.checked || null,
-        cropping: croppingInput.checked,
-        croppingWidth: croppingWidthInput.value || null,
-        croppingHeight: croppingHeightInput.value || null,
-        cropOffsetX: cropOffsetXInput.value || null,
-        cropOffsetY: cropOffsetYInput.value || null,
-      });
-    }
+        api.convertImage(filepath, {
+          extension: extension,
+          newExtension: dropdownFileTypes.value || null,
+          width: widthInput.value || null,
+          height: heightInput.value || null,
+          flipX: flipXInput.checked,
+          flipY: flipYInput.checked,
+          aspectRatioMaintained: aspectRatio.checked || null,
+          cropping: croppingInput.checked,
+          croppingWidth: croppingWidthInput.value || null,
+          croppingHeight: croppingHeightInput.value || null,
+          cropOffsetX: cropOffsetXInput.value || null,
+          cropOffsetY: cropOffsetYInput.value || null,
+        });
+      }
+      break;
+    case "video":
+      {
+        const widthInput = optionsMap.get("widthInput").querySelector("input");
+        const heightInput = optionsMap
+          .get("heightInput")
+          .querySelector("input");
+        const flipXInput = optionsMap
+          .get("flipXInput")
+          .querySelector('input[type="checkbox"]');
+        console.log(flipXInput);
+        const flipYInput = optionsMap
+          .get("flipYInput")
+          .querySelector('input[type="checkbox"]');
+        const aspectRatio = optionsMap
+          .get("aspectRatio")
+          .querySelector("input");
+        const croppingInput = optionsMap
+          .get("croppingInput")
+          .querySelector('input[type="checkbox"]');
+        const croppingWidthInput = optionsMap
+          .get("croppingWidth")
+          .querySelector("input");
+        const croppingHeightInput = optionsMap
+          .get("croppingHeight")
+          .querySelector("input");
+        const cropOffsetXInput = optionsMap
+          .get("cropOffsetX")
+          .querySelector("input");
+        const cropOffsetYInput = optionsMap
+          .get("cropOffsetY")
+          .querySelector("input");
+        const volume = optionsMap
+          .get("volume")
+          .querySelector("input");
+        const removeAudio = optionsMap
+          .get("removeAudio")
+          .querySelector("input");
+        const audioFormats = optionsMap
+          .get("audioFormats")
+          .querySelector("select");
+
+        api.convertVideo(filepath, {
+          extension: extension,
+          newExtension: dropdownFileTypes.value || null,
+          width: widthInput.value || null,
+          height: heightInput.value || null,
+          flipX: flipXInput.checked,
+          flipY: flipYInput.checked,
+          aspectRatioMaintained: aspectRatio.checked || null,
+          cropping: croppingInput.checked,
+          croppingWidth: croppingWidthInput.value || null,
+          croppingHeight: croppingHeightInput.value || null,
+          cropOffsetX: cropOffsetXInput.value || null,
+          cropOffsetY: cropOffsetYInput.value || null,
+          volume: (volume.value / 100),
+          removeAudio: removeAudio.checked,
+          audioFormat: audioFormats.options[audioFormats.selectedIndex].text,
+        });
+      }
+      break;
   }
+}
+
+function resetAudioFormats() {
+  const audioFormats = document.getElementById('audioFormats');
+  audioFormats.innerHTML = "";
+
+  supportedCodecs = getSupportedCodecs(dropdownFileTypes.options[dropdownFileTypes.selectedIndex].text);
+  supportedCodecs.forEach(codec => {
+    const option = document.createElement('option');
+    option.innerHTML = codec;
+    audioFormats.appendChild(option);
+  });
 }
